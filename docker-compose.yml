@@ -1,0 +1,319 @@
+version: '3'
+
+networks:
+  local_network:
+    driver: bridge
+    name: local_network
+    ipam:
+      config:
+        - subnet: 10.0.0.0/8
+
+volumes:
+  netdataconfig:
+  netdatalib:
+  netdatacache:       
+
+services:
+
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - "OVH_ENDPOINT=${OVH_ENDPOINT}"
+      - "OVH_APPLICATION_KEY=${OVH_APPLICATION_KEY}"
+      - "OVH_APPLICATION_SECRET=${OVH_APPLICATION_SECRET}"
+      - "OVH_CONSUMER_KEY=${OVH_CONSUMER_KEY}"
+    command:
+      - "--api.insecure=false"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.dnschallenge.provider=ovh"
+      - "--certificatesresolvers.myresolver.acme.email=${MAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8888"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "${ROOT}/config/traefik/letsencrypt:/letsencrypt"
+      - "${ROOT}/config/traefik/traefik.toml:/etc/traefik/traefik.toml"
+      - "${ROOT}/config/traefik/log:/log"
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.20
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-api.rule=Host(`localhost`)"
+      - "traefik.http.routers.traefik-api.service=api@internal"
+
+  deluge:
+    image: lscr.io/linuxserver/deluge:latest
+    container_name: deluge
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DELUGE_LOGLEVEL=error
+    volumes:
+      - ${ROOT}/config/deluge/config:/config
+      - ${SHARE}:/share
+    expose:
+      - 8112
+    ports:
+      - "6881:6881"
+      - "6881:6881/udp"
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.deluge.entrypoints=websecure"
+      - "traefik.http.routers.deluge.rule=Host(`deluge.${DOMAIN}`)"
+      - "traefik.http.routers.deluge.service=deluge"
+      - "traefik.http.services.deluge.loadBalancer.server.port=8112"
+      - "traefik.http.routers.deluge.tls=true"
+      - "traefik.http.routers.deluge.tls.certresolver=leresolver"
+
+  plex:
+    image: plexinc/pms-docker
+    container_name: plexms
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - PLEX_CLAIM=${PLEX_TOKEN}
+      - HOSTNAME=${PLEX_HOSTNAME}
+    ports:
+      - "32400:32400/tcp"
+      - "32469:32469/tcp"
+    volumes:
+      - ${ROOT}/config/plexms/config:/config
+      - ${ROOT}/config/plexms/transcodes:/transcode
+      - ${SHARE}:/share
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.4
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.plex.entrypoints=websecure"
+      - "traefik.http.routers.plex.rule=Host(`plex.${DOMAIN}`)"
+      - "traefik.http.services.plex.loadbalancer.server.port=32400"
+      - "traefik.http.routers.plex.tls=true"
+      - "traefik.http.routers.plex.tls.certresolver=leresolver"
+
+  tautulli:
+    image: linuxserver/tautulli:latest
+    container_name: tautulli
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    expose:
+      - 8181
+    volumes:
+      - ${ROOT}/config/tautulli/config:/config
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.5
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tautulli.entrypoints=websecure"
+      - "traefik.http.routers.tautulli.rule=Host(`tautulli.${DOMAIN}`)"
+      - "traefik.http.services.tautulli.loadBalancer.server.port=8181"
+      - "traefik.http.routers.tautulli.tls=true"
+      - "traefik.http.routers.tautulli.tls.certresolver=leresolver"
+
+  overseerr:
+    image: sctx/overseerr:latest
+    container_name: overseerr
+    environment:
+      - LOG_LEVEL=debug
+      - PORT=5058
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    expose:
+      - 5058
+    volumes:
+      - ${ROOT}/config/overseerr/config:/app/config
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.6
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.overseerr.entrypoints=websecure"
+      - "traefik.http.routers.overseerr.rule=Host(`overseerr.${DOMAIN}`)"
+      - "traefik.http.services.overseerr.loadBalancer.server.port=5058"
+      - "traefik.http.routers.overseerr.tls=true"
+      - "traefik.http.routers.overseerr.tls.certresolver=leresolver"
+
+  jackett:
+    container_name: jackett
+    image: linuxserver/jackett:latest
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    expose:
+      - 9117
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${ROOT}/downloads/torrent-blackhole:/downloads
+      - ${ROOT}/config/jackett:/config
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.7
+
+  sonarr:
+    container_name: sonarr
+    image: linuxserver/sonarr:latest
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    expose:
+      - 8989
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${ROOT}/config/sonarr:/config
+      - ${SHARE}:/share
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.8
+
+  radarr:
+    container_name: radarr
+    image: linuxserver/radarr:latest
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    expose:
+      - 7878
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${ROOT}/config/radarr:/config
+      - ${SHARE}:/share
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.9
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=${TZ}
+    expose:
+      - 8191
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.10
+
+  joal:
+    image: anthonyraymond/joal:latest
+    container_name: joal
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    restart: unless-stopped
+    volumes:
+      - ${ROOT}/config/joal:/data
+    expose:
+      - 1234
+    command: ["--joal-conf=/data", "--spring.main.web-environment=true", "--server.port=1234", "--joal.ui.path.prefix=joal", "--joal.ui.secret-token=Qwerty123"]
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.11
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: uptime-kuma
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID} 
+      - TZ=${TZ}
+    volumes:
+      - ${ROOT}/config/uptime-kuma-data:/app/data
+    expose:
+      - 3001
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.12
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
+      - "traefik.http.routers.uptime-kuma.rule=Host(`uptime-kuma.${DOMAIN}`)"
+      - "traefik.http.services.uptime-kuma.loadBalancer.server.port=3001"
+      - "traefik.http.routers.uptime-kuma.tls=true"
+      - "traefik.http.routers.uptime-kuma.tls.certresolver=leresolver"
+
+  ouroboros:
+    container_name: ouroboros
+    hostname: ouroboros
+    image: pyouroboros/ouroboros
+    environment:
+      - CLEANUP=true
+        #- INTERVAL=300
+      - CRON="0 5 * * *"
+      - LOG_LEVEL=info
+      - SELF_UPDATE=true
+      - IGNORE=mongo influxdb postgres mariadb
+      - TZ=${TZ}
+      - NOTIFIERS=${NOTIFIERS}  
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.13
+
+  netdata:
+    image: netdata/netdata:latest
+    container_name: netdata
+    pid: host
+    restart: unless-stopped
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - netdataconfig:/etc/netdata
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    expose:
+      - 19999
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.16
