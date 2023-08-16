@@ -2,7 +2,7 @@
 
 ## Disclamer
 
-Please be aware that it is essential to abide by the law regarding downloading and streaming of content. Any illegal use of films and series is strictly prohibited.
+Please be aware that it is essential to abide by the law regarding downloading and streaming of content. Any illegal use of movies and tv shows is strictly prohibited.
 
 ## Apps
 
