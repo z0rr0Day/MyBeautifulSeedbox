@@ -37,3 +37,12 @@
       "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
     ]
 
+[certificatesResolvers]
+caServer = "https://acme-staging-v02.api.letsencrypt.org/directory"
+
+[certificatesResolvers.myresolver.acme]
+email = "putyouremail@here"
+storage = "/letsencrypt/acme.json"
+  [certificatesResolvers.myresolver.acme.dnsChallenge]
+  provider = "ovh"
+  delayBeforeCheck = 10
