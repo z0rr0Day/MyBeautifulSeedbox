@@ -20,7 +20,7 @@ Please be aware that it is essential to abide by the law regarding downloading a
 | Traefik 			   | traefik.yourdomain.com     | traefik:(80,443,8080) 	| [traefik](https://hub.docker.com/_/traefik)                           										| *latest* | Traefik reverse proxy (access to admin dashboard) 			 |
 | Joal				   | /						    | joal:1234		 			| [joal](https://hub.docker.com/r/anthonyraymond/joal)                       									| *latest* | Keep your ratio 											 |
 | Uptime Kuma		   | uptime-kuma.yourdomain.com	| uptime-kuma:3001	 		| [Uptime Kuma](https://hub.docker.com/r/louislam/uptime-kuma)                         							| *latest* | Self-hosted monitoring tool 								 |											 
-| Ouroboros		   	   | /							| / 						| [Ouroboros](https://hub.docker.com/r/pyouroboros/ouroboros)         											| *latest* | Keep your docker image updated 							 |
+| Watchtower	   	   | /							| / 						| [Watchtower](https://hub.docker.com/r/containrrr/watchtower)         											| *latest* | Keep your docker image updated 							 |
 
 ## Description 
 
@@ -36,6 +36,12 @@ You need to configure apps as follow :
 
 ## Configuration
 
+Download this project :
+
+```bash
+git clone https://github.com/z0rr0Day/MyBeautifulSeedbox.git
+```
+
 Edit `.env` file, to set `${ROOT}` folder, `${SHARE}` directory, your domain name and plex hostname.
 
 Apps config are in `$(ROOT}/config/${APPS}`
@@ -43,8 +49,7 @@ Apps config are in `$(ROOT}/config/${APPS}`
 ## Start
 
 ```bash
-cd /opt && git clone https://github.com/z0rr0Day/MyBeautifulSeedbox.git
-vim .env
+cd ${ROOT}
 docker compose up -d
 ```
 
@@ -56,6 +61,22 @@ docker compose down
 
 ## Tips
 
+### Monitor
+
 Use [ctop](https://github.com/bcicen/ctop) to monitor your dockers or use portainer.
 
+### SSH Tunnels
 
+To access to a local service (which is not publish front of server)
+
+```bash
+ssh -p ${PORT} -L ${LOCAL_PORT}:${DOCKER_IP}:${REMOTE_PORT} ${USERNAME}@${DOMAIN}
+```
+
+Example :
+```bash
+ssh -p 18956 -L 19999:10.0.0.16:19999 user@mydomain.tld
+# enter your password
+```
+
+Go to your favorite browser and `http://127.0.0.1:19999`
