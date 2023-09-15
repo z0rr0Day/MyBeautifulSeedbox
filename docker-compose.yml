@@ -81,7 +81,7 @@ services:
       - "traefik.http.routers.deluge.service=deluge"
       - "traefik.http.services.deluge.loadBalancer.server.port=8112"
       - "traefik.http.routers.deluge.tls=true"
-      - "traefik.http.routers.deluge.tls.certresolver=leresolver"
+      - "traefik.http.routers.deluge.tls.certresolver=myresolver"
 
   plex:
     image: plexinc/pms-docker
@@ -109,7 +109,7 @@ services:
       - "traefik.http.routers.plex.rule=Host(`plex.${DOMAIN}`)"
       - "traefik.http.services.plex.loadbalancer.server.port=32400"
       - "traefik.http.routers.plex.tls=true"
-      - "traefik.http.routers.plex.tls.certresolver=leresolver"
+      - "traefik.http.routers.plex.tls.certresolver=myresolver"
 
   tautulli:
     image: linuxserver/tautulli:latest
@@ -132,7 +132,7 @@ services:
       - "traefik.http.routers.tautulli.rule=Host(`tautulli.${DOMAIN}`)"
       - "traefik.http.services.tautulli.loadBalancer.server.port=8181"
       - "traefik.http.routers.tautulli.tls=true"
-      - "traefik.http.routers.tautulli.tls.certresolver=leresolver"
+      - "traefik.http.routers.tautulli.tls.certresolver=myresolver"
 
   overseerr:
     image: sctx/overseerr:latest
@@ -157,7 +157,7 @@ services:
       - "traefik.http.routers.overseerr.rule=Host(`overseerr.${DOMAIN}`)"
       - "traefik.http.services.overseerr.loadBalancer.server.port=5058"
       - "traefik.http.routers.overseerr.tls=true"
-      - "traefik.http.routers.overseerr.tls.certresolver=leresolver"
+      - "traefik.http.routers.overseerr.tls.certresolver=myresolver"
 
   jackett:
     container_name: jackett
@@ -254,6 +254,7 @@ services:
       - TZ=${TZ}
     volumes:
       - ${ROOT}/config/uptime-kuma-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
     expose:
       - 3001
     restart: unless-stopped
@@ -266,23 +267,21 @@ services:
       - "traefik.http.routers.uptime-kuma.rule=Host(`uptime-kuma.${DOMAIN}`)"
       - "traefik.http.services.uptime-kuma.loadBalancer.server.port=3001"
       - "traefik.http.routers.uptime-kuma.tls=true"
-      - "traefik.http.routers.uptime-kuma.tls.certresolver=leresolver"
+      - "traefik.http.routers.uptime-kuma.tls.certresolver=myresolver"
 
-  ouroboros:
-    container_name: ouroboros
-    hostname: ouroboros
-    image: pyouroboros/ouroboros
-    environment:
-      - CLEANUP=true
-        #- INTERVAL=300
-      - CRON="0 5 * * *"
-      - LOG_LEVEL=info
-      - SELF_UPDATE=true
-      - IGNORE=mongo influxdb postgres mariadb
-      - TZ=${TZ}
-      - NOTIFIERS=${NOTIFIERS}  
+  watchtower:     
+    image: containrrr/watchtower
+    container_name: watchtower 
     restart: unless-stopped
-    volumes:
+    environment: 
+      TZ: ${TZ}
+      WATCHTOWER_SCHEDULE: "0 00 05 * * *" 
+      WATCHTOWER_LABEL_ENABLE: "false"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_NOTIFICATION_URL: "discord://${DISCORD_TOKEN}@${DISCORD_ID}"
+      WATCHTOWER_NOTIFICATION_TEMPLATE: |-
+        {{range .}}{{.Time.Format "12-01-2020 15:04:05"}} ({{.Level}})':' {{.Message}}{{println}}{{end}}
+    volumes: 
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       local_network:
