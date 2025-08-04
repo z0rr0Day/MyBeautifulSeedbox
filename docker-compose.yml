@@ -11,7 +11,8 @@ networks:
 volumes:
   netdataconfig:
   netdatalib:
-  netdatacache:       
+  netdatacache:
+  data_etc_wireguard:      
 
 services:
 
@@ -111,6 +112,31 @@ services:
       - "traefik.http.routers.plex.tls=true"
       - "traefik.http.routers.plex.tls.certresolver=myresolver"
 
+  emby:
+    image: lscr.io/linuxserver/emby
+    container_name: emby
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    expose:
+      - 8096
+      - 8920
+    volumes:
+      - ${ROOT}/config/emby/config:/config
+      - ${SHARE}:/share
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.15
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.emby.entrypoints=websecure"
+      - "traefik.http.routers.emby.rule=Host(`emby.${DOMAIN}`)"
+      - "traefik.http.services.emby.loadbalancer.server.port=8096"
+      - "traefik.http.routers.emby.tls=true"
+      - "traefik.http.routers.emby.tls.certresolver=myresolver"
+
   tautulli:
     image: linuxserver/tautulli:latest
     container_name: tautulli
@@ -158,6 +184,29 @@ services:
       - "traefik.http.services.overseerr.loadBalancer.server.port=5058"
       - "traefik.http.routers.overseerr.tls=true"
       - "traefik.http.routers.overseerr.tls.certresolver=myresolver"
+
+  ombi:
+    image: lscr.io/linuxserver/ombi
+    container_name: ombi
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    expose:
+      - 3579
+    volumes:
+      - ${ROOT}/config/ombi/config:/config
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.17
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ombi.entrypoints=websecure"
+      - "traefik.http.routers.ombi.rule=Host(`ombi.${DOMAIN}`)"
+      - "traefik.http.services.ombi.loadBalancer.server.port=5058"
+      - "traefik.http.routers.ombi.tls=true"
+      - "traefik.http.routers.ombi.tls.certresolver=myresolver"
 
   jackett:
     container_name: jackett
@@ -316,3 +365,31 @@ services:
     networks:
       local_network:
         ipv4_address: 10.0.0.16
+
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy:latest
+    container_name: wg-easy
+    environment:
+      - WG_HOST=${WIREGUARD_FQDN}
+      - PASSWORD_HASH=${WIREGUARD_HASHED_PASSWORD}
+      - WG_PORT=51820
+      - WG_ALLOWED_IPS=10.0.0.4/32
+      - WG_DEFAULT_ADDRESS=10.8.0.x
+      - WG_DEFAULT_DNS=auto
+    volumes:
+      - data_etc_wireguard:/etc/wireguard
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "51820:51820/udp"
+    expose:
+      - 51821
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    networks:
+      local_network:
+        ipv4_address: 10.0.0.14
