@@ -45,7 +45,7 @@ You need to generate your password using this command :
 docker run -it ghcr.io/wg-easy/wg-easy wgpw CHANGEME
 ```
 
-Get the output without the single quotes, double every `$`, and then copy/paste to `.env` file at `${PASSWORD_HASH}`.
+Get the output without the single quotes, double every `$`, and then copy/paste to `.env` file at `${WIREGUARD_HASHED_PASSWORD}`.
 
 ## Configuration
 
