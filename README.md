@@ -49,12 +49,6 @@ Get the output without the single quotes, double every `$`, and then copy/paste 
 
 ## Configuration
 
-Download this project :
-
-```bash
-git clone https://github.com/z0rr0Day/MyBeautifulSeedbox.git
-```
-
 Edit `.env` file, to set `${ROOT}` folder, `${SHARE}` directory, your domain name and plex hostname/token.
 
 Apps config are in `$(ROOT}/config/${APPS}`
